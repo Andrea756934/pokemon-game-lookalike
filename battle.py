@@ -1,13 +1,13 @@
 from __future__ import annotations
 
 import math
-import random
 
 import pygame
 
-from models import Creature, Particle
+from models import Particle
 from data import effectiveness, TRAINERS
 from settings import COLORS, TYPE_COLORS
+
 from ui import (
     panel,
     text,
@@ -16,6 +16,13 @@ from ui import (
     type_badge,
     dialogue,
 )
+
+
+# ============================================================
+# CONFIG
+# ============================================================
+
+MAX_TEAM_SIZE = 6
 
 
 class BattleController:
@@ -28,69 +35,85 @@ class BattleController:
         intro="",
     ):
 
-        self.game=game
+        self.game = game
 
-        self.enemies=enemies
+        self.enemies = enemies
 
-        self.index=0
+        self.index = 0
 
-        self.trainer_index=trainer_index
-
-        self.rng=game.rng
-
-        self.message=(
-            intro
-            or
-            f"Un {self.enemy.name} selvatico appare!"
+        self.trainer_index = (
+            trainer_index
         )
 
-        self.phase="input"
+        self.rng = (
+            game.rng
+        )
 
-        self.menu="moves"
+        self.message = (
 
-        self.anim=None
+            intro
 
-        self.delay=0
+            or
 
-        self.pending_enemy=False
+            (
+                f"Un {self.enemy.name} "
+                "selvatico appare!"
+            )
+        )
 
-        self.must_switch=False
+        self.phase = "input"
 
-        self.run_attempts=0
+        self.menu = "moves"
 
-        self.enemy_heals=0
+        self.anim = None
 
-        self.display_enemy_hp=float(
+        self.delay = 0
+
+        self.pending_enemy = False
+
+        self.must_switch = False
+
+        self.run_attempts = 0
+
+        self.enemy_heals = 0
+
+        self.display_enemy_hp = float(
             self.enemy.hp
         )
 
-        self.display_hero_hp=float(
+        self.display_hero_hp = float(
             game.hero.hp
         )
 
-        self.particles=[]
+        self.particles = []
 
-        self.flash=0
+        self.flash = 0
 
-        self.shake=0
+        self.shake = 0
 
-        self.capture_anim=None
+        self.capture_anim = None
+
+    # ========================================================
+    # PROPERTIES
+    # ========================================================
 
     @property
     def enemy(self):
+
         return self.enemies[
             self.index
         ]
 
     @property
     def wild(self):
+
         return (
             self.trainer_index
             is None
         )
 
     # ========================================================
-    # PARTICELLE
+    # PARTICLES
     # ========================================================
 
     def spawn_particles(
@@ -102,26 +125,50 @@ class BattleController:
         speed=65,
     ):
 
-        for _ in range(count):
+        for _ in range(
+            count
+        ):
 
-            a=self.rng.random()*math.tau
+            angle = (
+                self.rng.random()
+                *
+                math.tau
+            )
 
-            sp=self.rng.uniform(
-                speed*.35,
-                speed,
+            particle_speed = (
+                self.rng.uniform(
+                    speed * .35,
+                    speed,
+                )
             )
 
             self.particles.append(
+
                 Particle(
+
                     x,
+
                     y,
-                    math.cos(a)*sp,
-                    math.sin(a)*sp,
+
+                    math.cos(
+                        angle
+                    )
+                    *
+                    particle_speed,
+
+                    math.sin(
+                        angle
+                    )
+                    *
+                    particle_speed,
+
                     self.rng.uniform(
                         .25,
                         .55,
                     ),
+
                     color,
+
                     self.rng.choice(
                         (
                             1,
@@ -129,92 +176,166 @@ class BattleController:
                             2,
                         )
                     ),
+
                     42,
                 )
             )
 
     # ========================================================
-    # MOSSE
+    # MOVE
     # ========================================================
 
-    def choose_move(self, idx):
+    def choose_move(
+        self,
+        index,
+    ):
 
         if (
-            self.phase!="input"
+            self.phase
+            !=
+            "input"
             or
             self.must_switch
             or
-            not 0<=idx<4
+            not
+            0
+            <=
+            index
+            <
+            4
         ):
+
             return
 
-        move=self.game.hero.moves[
-            idx
-        ]
+        move = (
+            self.game.hero.moves[
+                index
+            ]
+        )
 
-        if self.game.hero.pp[idx]<=0:
-            self.message=(
-                "Quella mossa non ha piu' PP."
+        if (
+            self.game.hero.pp[
+                index
+            ]
+            <=
+            0
+        ):
+
+            self.message = (
+                "NESSUN PP"
             )
+
             return
 
         if (
-            move.get("heal")
+            move.get(
+                "heal"
+            )
             and
             self.game.hero.hp
             >=
             self.game.hero.max_hp
         ):
-            self.message=(
-                "I PS sono gia' al massimo."
+
+            self.message = (
+                "PS GIA' AL MASSIMO"
             )
+
             return
 
         self._start_move(
             True,
-            idx,
+            index,
         )
+
+    # ========================================================
+    # ENEMY AI
+    # ========================================================
 
     def _enemy_choice(self):
 
-        e=self.enemy
+        enemy = (
+            self.enemy
+        )
 
         if (
-            e.hp<e.max_hp*.3
+            enemy.hp
+            <
+            enemy.max_hp
+            *
+            .3
             and
-            e.pp[3]>0
+            enemy.pp[3]
+            >
+            0
             and
-            self.enemy_heals<1
+            self.enemy_heals
+            <
+            1
         ):
 
-            self.enemy_heals+=1
+            self.enemy_heals += 1
 
             return 3
 
-        options=[
-            i
-            for i,m in enumerate(
-                e.moves[:3]
+        options = [
+
+            index
+
+            for (
+                index,
+                move,
             )
-            if e.pp[i]>0
+            in enumerate(
+                enemy.moves[
+                    :3
+                ]
+            )
+
+            if
+            enemy.pp[
+                index
+            ]
+            >
+            0
         ]
 
         if not options:
+
             return 0
 
-        def score(i):
+        def score(
+            index,
+        ):
 
-            m=e.moves[i]
+            move = (
+                enemy.moves[
+                    index
+                ]
+            )
 
             return (
-                m["power"]
+
+                move[
+                    "power"
+                ]
+
                 *
+
                 effectiveness(
-                    m["type"],
+
+                    move[
+                        "type"
+                    ],
+
                     self.game.hero.element,
                 )
+
                 +
-                self.rng.random()*4
+
+                self.rng.random()
+                *
+                4
             )
 
         return max(
@@ -222,377 +343,641 @@ class BattleController:
             key=score,
         )
 
+    # ========================================================
+    # START MOVE
+    # ========================================================
+
     def _start_move(
         self,
         hero_turn,
-        idx,
+        index,
     ):
 
-        actor=(
+        actor = (
+
             self.game.hero
-            if hero_turn
-            else self.enemy
+
+            if
+            hero_turn
+
+            else
+
+            self.enemy
         )
 
-        if actor.pp[idx]<=0:
-            idx=0
+        if (
+            actor.pp[
+                index
+            ]
+            <=
+            0
+        ):
 
-        actor.pp[idx]-=1
+            index = 0
 
-        move=actor.moves[idx]
+        actor.pp[
+            index
+        ] -= 1
 
-        self.phase="anim"
+        move = (
+            actor.moves[
+                index
+            ]
+        )
 
-        self.anim={
-            "hero":hero_turn,
-            "move":idx,
-            "t":0.0,
-            "duration":(
-                .62
-                if not move.get("heal")
-                else .55
-            ),
-            "impact":.27,
-            "applied":False,
+        self.phase = (
+            "anim"
+        )
+
+        self.anim = {
+
+            "hero":
+                hero_turn,
+
+            "move":
+                index,
+
+            "t":
+                0.0,
+
+            "duration":
+                (
+                    .62
+
+                    if
+                    not
+                    move.get(
+                        "heal"
+                    )
+
+                    else
+
+                    .55
+                ),
+
+            "impact":
+                .27,
+
+            "applied":
+                False,
         }
 
-        self.message=(
-            f"{actor.name} usa "
-            f"{move['name']}!"
+        self.message = (
+            f"{actor.name} USA "
+            f"{move['name']}"
         )
+
+    # ========================================================
+    # APPLY MOVE
+    # ========================================================
 
     def _apply_move(
         self,
         hero_turn,
-        idx,
+        index,
     ):
 
-        actor=(
+        actor = (
+
             self.game.hero
-            if hero_turn
-            else self.enemy
-        )
 
-        target=(
+            if
+            hero_turn
+
+            else
+
             self.enemy
-            if hero_turn
-            else self.game.hero
         )
 
-        move=actor.moves[idx]
+        target = (
 
-        # Cura
+            self.enemy
 
-        if move.get("heal"):
+            if
+            hero_turn
 
-            amount=min(
-                actor.max_hp-actor.hp,
+            else
+
+            self.game.hero
+        )
+
+        move = (
+            actor.moves[
+                index
+            ]
+        )
+
+        # ====================================================
+        # HEAL
+        # ====================================================
+
+        if (
+            move.get(
+                "heal"
+            )
+        ):
+
+            amount = min(
+
+                actor.max_hp
+                -
+                actor.hp,
+
                 max(
+
                     1,
+
                     int(
+
                         actor.max_hp
+
                         *
-                        move["heal"]
+
+                        move[
+                            "heal"
+                        ]
                     ),
                 ),
             )
 
-            actor.hp+=amount
+            actor.hp += (
+                amount
+            )
 
-            self.message=(
-                f"{actor.name} recupera "
-                f"{amount} PS!"
+            self.message = (
+                f"{actor.name} +{amount} PS"
             )
 
             self.spawn_particles(
+
                 90
                 if hero_turn
-                else 244,
+                else
+                244,
+
                 105
                 if hero_turn
-                else 63,
+                else
+                63,
+
                 (
                     126,
                     213,
                     135,
                 ),
+
                 18,
+
                 45,
             )
 
             return
 
-        mult=effectiveness(
-            move["type"],
-            target.element,
+        # ====================================================
+        # DAMAGE
+        # ====================================================
+
+        multiplier = (
+            effectiveness(
+
+                move[
+                    "type"
+                ],
+
+                target.element,
+            )
         )
 
-        stab=(
+        stab = (
+
             1.2
+
             if
-            move["type"]==actor.element
+            move[
+                "type"
+            ]
+            ==
+            actor.element
+
             else
+
             1.0
         )
 
-        critical=(
+        critical = (
             self.rng.random()
-            <.065
+            <
+            .065
         )
 
-        raw=(
+        raw_damage = (
+
             (
-                move["power"]
+                move[
+                    "power"
+                ]
+
                 +
-                actor.level*.9
+                actor.level
+                *
+                .9
             )
+
             *
+
             actor.attack
+
             /
+
             max(
                 1,
                 target.defense,
             )
+
             *
+
             .40
         )
 
-        dmg=max(
+        damage = max(
+
             1,
+
             int(
-                raw
+
+                raw_damage
+
                 *
-                mult
+
+                multiplier
+
                 *
+
                 stab
+
                 *
+
                 self.rng.uniform(
                     .92,
                     1.06,
                 )
+
                 *
+
                 (
                     1.4
                     if critical
-                    else 1
+                    else
+                    1
                 )
             ),
         )
 
-        target.hp=max(
+        target.hp = max(
+
             0,
-            target.hp-dmg,
+
+            target.hp
+            -
+            damage,
         )
 
-        suffix=""
+        suffix = ""
 
-        if mult>1:
-            suffix=" Super efficace!"
+        if (
+            multiplier
+            >
+            1
+        ):
 
-        elif mult<1:
-            suffix=" Poco efficace."
+            suffix = (
+                " SUPER!"
+            )
 
-        if critical:
-            suffix+=" Critico!"
+        elif (
+            multiplier
+            <
+            1
+        ):
 
-        self.message=(
-            f"{target.name} perde "
-            f"{dmg} PS."
+            suffix = (
+                " DEBOLE"
+            )
+
+        if (
+            critical
+        ):
+
+            suffix += (
+                " CRITICO!"
+            )
+
+        self.message = (
+            f"{target.name} -{damage} PS"
             f"{suffix}"
         )
 
-        pos=(
-            (239,66)
-            if hero_turn
+        position = (
+
+            (
+                239,
+                66,
+            )
+
+            if
+            hero_turn
+
             else
-            (78,111)
+
+            (
+                78,
+                111,
+            )
         )
 
         self.spawn_particles(
-            *pos,
+
+            *position,
+
             TYPE_COLORS.get(
-                move["type"],
-                COLORS["white"],
+
+                move[
+                    "type"
+                ],
+
+                COLORS[
+                    "white"
+                ],
             ),
+
             18,
+
             80,
         )
 
-        self.flash=.12
+        self.flash = .12
 
-        self.shake=.16
+        self.shake = .16
 
     # ========================================================
-    # POZIONI
+    # POTION
     # ========================================================
 
     def use_potion(self):
 
         if (
-            self.phase!="input"
+            self.phase
+            !=
+            "input"
             or
             self.must_switch
         ):
-            return
 
-        if self.game.potions<=0:
-            self.message=(
-                "Non hai pozioni."
-            )
             return
-
-        h=self.game.hero
 
         if (
-            h.hp<=0
-            or
-            h.hp>=h.max_hp
+            self.game.potions
+            <=
+            0
         ):
-            self.message=(
-                "Non puoi usare "
-                "la pozione adesso."
+
+            self.message = (
+                "NESSUNA POZIONE"
             )
+
             return
 
-        self.game.potions-=1
+        hero = (
+            self.game.hero
+        )
 
-        amount=min(
+        if (
+            hero.hp
+            <=
+            0
+            or
+            hero.hp
+            >=
+            hero.max_hp
+        ):
+
+            self.message = (
+                "NON PUOI USARLA"
+            )
+
+            return
+
+        self.game.potions -= 1
+
+        amount = min(
+
             35,
-            h.max_hp-h.hp,
+
+            hero.max_hp
+            -
+            hero.hp,
         )
 
-        h.hp+=amount
-
-        self.message=(
-            f"{h.name} recupera "
-            f"{amount} PS."
+        hero.hp += (
+            amount
         )
 
-        self.phase="delay"
+        self.message = (
+            f"{hero.name} +{amount} PS"
+        )
 
-        self.delay=.35
+        self.phase = (
+            "delay"
+        )
 
-        self.pending_enemy=True
+        self.delay = .35
+
+        self.pending_enemy = True
 
     # ========================================================
-    # CATTURA
+    # CAPTURE
     # ========================================================
 
     def capture(self):
 
         if (
-            self.phase!="input"
+            self.phase
+            !=
+            "input"
             or
             self.must_switch
         ):
+
             return
 
-        if not self.wild:
-            self.message=(
-                "Non puoi catturare "
-                "le creature degli allenatori!"
+        if (
+            not
+            self.wild
+        ):
+
+            self.message = (
+                "NON PUOI CATTURARLO"
             )
+
             return
 
-        if len(self.game.team)>=3:
-            self.message=(
-                "Squadra piena: "
-                "massimo 3 creature."
+        # ====================================================
+        # MASSIMO 6
+        # ====================================================
+
+        if (
+            len(
+                self.game.team
             )
-            return
+            >=
+            MAX_TEAM_SIZE
+        ):
 
-        if self.game.balls<=0:
-            self.message=(
-                "Non hai piu' sfere."
+            self.message = (
+                "SQUADRA PIENA 6/6"
             )
+
             return
 
-        self.game.balls-=1
+        if (
+            self.game.balls
+            <=
+            0
+        ):
 
-        chance=min(
+            self.message = (
+                "NESSUNA SFERA"
+            )
+
+            return
+
+        self.game.balls -= 1
+
+        chance = min(
+
             .94,
+
             .24
+
             +
+
             (
                 1
+
                 -
+
                 self.enemy.hp
+
                 /
+
                 self.enemy.max_hp
             )
-            *.70,
+
+            *
+
+            .70,
         )
 
-        success=(
+        success = (
             self.rng.random()
-            <chance
+            <
+            chance
         )
 
-        self.phase="capture"
+        self.phase = (
+            "capture"
+        )
 
-        self.capture_anim={
-            "t":0.0,
-            "success":success,
-            "shakes":0,
+        self.capture_anim = {
+
+            "t":
+                0.0,
+
+            "success":
+                success,
+
+            "shakes":
+                0,
         }
 
-        self.message=(
-            "Lanci una Sfera Selva!"
+        self.message = (
+            "LANCIO SFERA!"
         )
 
     # ========================================================
-    # FUGA
+    # RUN
     # ========================================================
 
     def run(self):
 
         if (
-            self.phase!="input"
+            self.phase
+            !=
+            "input"
             or
             self.must_switch
         ):
+
             return
 
-        if not self.wild:
-            self.message=(
-                "Non puoi fuggire "
-                "da un allenatore."
+        if (
+            not
+            self.wild
+        ):
+
+            self.message = (
+                "NON PUOI FUGGIRE"
             )
+
             return
 
-        self.run_attempts+=1
+        self.run_attempts += 1
 
-        chance=min(
+        chance = min(
+
             1,
+
             .65
+
             +
+
             .18
+
             *
+
             (
-                self.run_attempts-1
+                self.run_attempts
+                -
+                1
             ),
         )
 
-        if self.rng.random()<chance:
+        if (
+            self.rng.random()
+            <
+            chance
+        ):
 
             self.game.finish_battle(
-                "Fuga riuscita."
+                "FUGA RIUSCITA"
             )
 
         else:
 
-            self.message=(
-                "Fuga fallita!"
+            self.message = (
+                "FUGA FALLITA"
             )
 
-            self.phase="delay"
+            self.phase = (
+                "delay"
+            )
 
-            self.delay=.3
+            self.delay = .3
 
-            self.pending_enemy=True
+            self.pending_enemy = True
 
     # ========================================================
-    # CAMBIO CREATURE
+    # SWITCH
     # ========================================================
 
     def switch(
@@ -601,38 +986,70 @@ class BattleController:
     ):
 
         if not (
-            0<=index<len(self.game.team)
+            0
+            <=
+            index
+            <
+            len(
+                self.game.team
+            )
         ):
+
             return False
 
         if (
-            index==self.game.active
-            or
-            self.game.team[index].hp<=0
+            index
+            ==
+            self.game.active
         ):
+
             return False
 
-        forced=self.must_switch
+        if (
+            self.game.team[
+                index
+            ].hp
+            <=
+            0
+        ):
 
-        self.game.active=index
+            return False
 
-        self.must_switch=False
+        forced = (
+            self.must_switch
+        )
 
-        self.display_hero_hp=float(
+        self.game.active = (
+            index
+        )
+
+        self.must_switch = False
+
+        self.display_hero_hp = float(
             self.game.hero.hp
         )
 
-        self.message=(
-            f"Vai, {self.game.hero.name}!"
+        self.message = (
+            f"VAI {self.game.hero.name}!"
         )
 
-        if forced:
-            self.phase="input"
+        if (
+            forced
+        ):
+
+            self.phase = (
+                "input"
+            )
 
         else:
-            self.phase="delay"
-            self.delay=.3
-            self.pending_enemy=True
+
+            self.phase = (
+                "delay"
+            )
+
+            self.delay = .3
+
+            self.pending_enemy = True
 
         return True
 
@@ -642,149 +1059,221 @@ class BattleController:
 
     def _resolve_ko(self):
 
-        # Nemico KO
+        # ====================================================
+        # ENEMY KO
+        # ====================================================
 
-        if self.enemy.hp<=0:
+        if (
+            self.enemy.hp
+            <=
+            0
+        ):
 
-            defeated=self.enemy
-
-            reward=(
-                14
-                +
-                defeated.level*5
+            defeated = (
+                self.enemy
             )
 
-            for i,c in enumerate(
+            reward = (
+                14
+                +
+                defeated.level
+                *
+                5
+            )
+
+            # Esperienza a tutta la squadra viva
+
+            for (
+                index,
+                creature,
+            ) in enumerate(
                 self.game.team
             ):
 
-                if c.hp>0:
-                    c.gain_xp(
+                if (
+                    creature.hp
+                    >
+                    0
+                ):
+
+                    creature.gain_xp(
+
                         reward
+
                         if
-                        i==self.game.active
+                        index
+                        ==
+                        self.game.active
+
                         else
+
                         max(
                             1,
-                            reward//2,
+                            reward // 2,
                         )
                     )
 
-            self.game.coins+=(
+            self.game.coins += (
                 8
                 +
                 defeated.level
             )
 
+            # Altro Pokémon dell'allenatore
+
             if (
-                self.index+1
+                self.index
+                +
+                1
                 <
-                len(self.enemies)
+                len(
+                    self.enemies
+                )
             ):
 
-                self.index+=1
+                self.index += 1
 
-                self.enemy_heals=0
+                self.enemy_heals = 0
 
-                self.display_enemy_hp=float(
+                self.display_enemy_hp = float(
                     self.enemy.hp
                 )
 
-                self.message=(
-                    f"Entra {self.enemy.name}, "
-                    f"Lv.{self.enemy.level}!"
+                self.message = (
+                    f"ENTRA {self.enemy.name}"
                 )
 
-                self.phase="delay"
+                self.phase = (
+                    "delay"
+                )
 
-                self.delay=.7
+                self.delay = .7
 
-                self.pending_enemy=False
+                self.pending_enemy = False
 
                 return True
 
-            trainer=self.trainer_index
+            trainer = (
+                self.trainer_index
+            )
 
-            if trainer is not None:
+            # Trainer
+
+            if (
+                trainer
+                is not None
+            ):
 
                 self.game.defeated.add(
                     trainer
                 )
 
-                self.game.coins+=(
+                self.game.coins += (
                     TRAINERS[
                         trainer
-                    ]["reward"]
+                    ][
+                        "reward"
+                    ]
                 )
 
-                self.game.potions+=2
+                self.game.potions += 2
 
-                self.game.balls+=2
+                self.game.balls += 2
 
-                if trainer==2:
+                if (
+                    trainer
+                    ==
+                    2
+                ):
 
-                    self.game.completed=True
+                    self.game.completed = True
 
                     self.game.finish_battle(
-                        "Hai battuto Alba!",
+                        "HAI BATTUTO ALBA!",
                         ending=True,
                     )
 
                     return True
 
                 self.game.finish_battle(
-                    "Medaglia ottenuta!"
+                    "MEDAGLIA OTTENUTA!"
                 )
 
                 return True
 
+            # Wild
+
             self.game.finish_battle(
-                "Vittoria! "
-                "La squadra guadagna esperienza."
+                "VITTORIA!"
             )
 
             return True
 
-        # Giocatore KO
+        # ====================================================
+        # HERO KO
+        # ====================================================
 
-        if self.game.hero.hp<=0:
+        if (
+            self.game.hero.hp
+            <=
+            0
+        ):
 
-            living=[
-                i
-                for i,c in enumerate(
+            living = [
+
+                index
+
+                for (
+                    index,
+                    creature,
+                )
+                in enumerate(
                     self.game.team
                 )
-                if c.hp>0
+
+                if
+                creature.hp
+                >
+                0
             ]
 
-            if living:
+            if (
+                living
+            ):
 
-                self.must_switch=True
+                self.must_switch = True
 
-                self.phase="input"
+                self.phase = (
+                    "input"
+                )
 
-                self.message=(
-                    "Compagno KO! "
-                    "Premi Q e scegline un altro."
+                self.message = (
+                    "KO! SCEGLI UN ALTRO"
                 )
 
             else:
 
-                for c in self.game.team:
-                    c.heal_full()
+                for creature in (
+                    self.game.team
+                ):
 
-                self.game.active=0
+                    creature.heal_full()
 
-                self.game.coins=max(
+                self.game.active = 0
+
+                self.game.coins = max(
+
                     0,
-                    self.game.coins-20,
+
+                    self.game.coins
+                    -
+                    20,
                 )
 
                 self.game.reset_to_spawn()
 
                 self.game.finish_battle(
-                    "Squadra KO: "
-                    "ritorno al rifugio."
+                    "SQUADRA KO"
                 )
 
             return True
@@ -795,145 +1284,276 @@ class BattleController:
     # UPDATE
     # ========================================================
 
-    def update(self,dt):
+    def update(
+        self,
+        dt,
+    ):
 
-        for p in self.particles:
-            p.update(dt)
+        for particle in (
+            self.particles
+        ):
 
-        self.particles[:]=[
-            p
-            for p in self.particles
-            if p.life>0
+            particle.update(
+                dt
+            )
+
+        self.particles[:] = [
+
+            particle
+
+            for particle
+            in self.particles
+
+            if particle.life > 0
         ]
 
-        self.flash=max(
+        self.flash = max(
             0,
-            self.flash-dt,
+            self.flash - dt,
         )
 
-        self.shake=max(
+        self.shake = max(
             0,
-            self.shake-dt,
+            self.shake - dt,
         )
 
-        self.display_enemy_hp+=(
+        self.display_enemy_hp += (
+
             self.enemy.hp
+
             -
+
             self.display_enemy_hp
-        )*min(
+
+        ) * min(
             1,
-            dt*10,
+            dt * 10,
         )
 
-        self.display_hero_hp+=(
+        self.display_hero_hp += (
+
             self.game.hero.hp
+
             -
+
             self.display_hero_hp
-        )*min(
+
+        ) * min(
             1,
-            dt*10,
+            dt * 10,
         )
 
-        # Cattura
+        # ====================================================
+        # CAPTURE
+        # ====================================================
 
-        if self.phase=="capture":
+        if (
+            self.phase
+            ==
+            "capture"
+        ):
 
-            a=self.capture_anim
+            animation = (
+                self.capture_anim
+            )
 
-            a["t"]+=dt
+            animation[
+                "t"
+            ] += dt
 
-            if a["t"]>=1.75:
+            if (
+                animation[
+                    "t"
+                ]
+                >=
+                1.75
+            ):
 
-                if a["success"]:
+                if (
+                    animation[
+                        "success"
+                    ]
+                ):
 
-                    caught=self.enemy
-
-                    self.game.team.append(
-                        caught
+                    caught = (
+                        self.enemy
                     )
 
-                    self.game.finish_battle(
-                        f"{caught.name} catturato!"
-                    )
+                    # Ulteriore sicurezza
+
+                    if (
+                        len(
+                            self.game.team
+                        )
+                        <
+                        MAX_TEAM_SIZE
+                    ):
+
+                        self.game.team.append(
+                            caught
+                        )
+
+                        self.game.finish_battle(
+                            f"{caught.name} CATTURATO!"
+                        )
+
+                    else:
+
+                        self.phase = (
+                            "input"
+                        )
+
+                        self.message = (
+                            "SQUADRA PIENA 6/6"
+                        )
 
                 else:
 
-                    self.message=(
-                        "La sfera si apre! "
-                        "Indebolisci ancora la creatura."
+                    self.message = (
+                        "SI E' LIBERATO!"
                     )
 
-                    self.phase="delay"
+                    self.phase = (
+                        "delay"
+                    )
 
-                    self.delay=.35
+                    self.delay = .35
 
-                    self.pending_enemy=True
+                    self.pending_enemy = True
 
             return
 
-        # Animazione attacco
+        # ====================================================
+        # ATTACK ANIMATION
+        # ====================================================
 
-        if self.phase=="anim":
+        if (
+            self.phase
+            ==
+            "anim"
+        ):
 
-            a=self.anim
+            animation = (
+                self.anim
+            )
 
-            a["t"]+=dt
+            animation[
+                "t"
+            ] += dt
 
             if (
-                not a["applied"]
+                not
+                animation[
+                    "applied"
+                ]
                 and
-                a["t"]>=a["impact"]
+                animation[
+                    "t"
+                ]
+                >=
+                animation[
+                    "impact"
+                ]
             ):
 
-                a["applied"]=True
+                animation[
+                    "applied"
+                ] = True
 
                 self._apply_move(
-                    a["hero"],
-                    a["move"],
+
+                    animation[
+                        "hero"
+                    ],
+
+                    animation[
+                        "move"
+                    ],
                 )
 
-            if a["t"]>=a["duration"]:
+            if (
+                animation[
+                    "t"
+                ]
+                >=
+                animation[
+                    "duration"
+                ]
+            ):
 
-                hero_turn=a["hero"]
+                hero_turn = (
+                    animation[
+                        "hero"
+                    ]
+                )
 
-                self.anim=None
+                self.anim = None
 
-                if self._resolve_ko():
+                if (
+                    self._resolve_ko()
+                ):
+
                     return
 
-                if hero_turn:
+                if (
+                    hero_turn
+                ):
 
-                    self.phase="delay"
+                    self.phase = (
+                        "delay"
+                    )
 
-                    self.delay=.35
+                    self.delay = .35
 
-                    self.pending_enemy=True
+                    self.pending_enemy = True
 
                 else:
 
-                    self.phase="input"
+                    self.phase = (
+                        "input"
+                    )
 
-        elif self.phase=="delay":
+        # ====================================================
+        # DELAY
+        # ====================================================
 
-            self.delay-=dt
+        elif (
+            self.phase
+            ==
+            "delay"
+        ):
 
-            if self.delay<=0:
+            self.delay -= (
+                dt
+            )
 
-                if self.pending_enemy:
+            if (
+                self.delay
+                <=
+                0
+            ):
 
-                    self.pending_enemy=False
+                if (
+                    self.pending_enemy
+                ):
+
+                    self.pending_enemy = False
 
                     self._start_move(
+
                         False,
+
                         self._enemy_choice(),
                     )
 
                 else:
 
-                    self.phase="input"
+                    self.phase = (
+                        "input"
+                    )
 
     # ========================================================
-    # HUD CREATURE
+    # STATUS
     # ========================================================
 
     def _status(
@@ -945,9 +1565,12 @@ class BattleController:
         hp_value,
     ):
 
-        r=panel(
+        rect = panel(
+
             surface,
+
             rect,
+
             (
                 242,
                 238,
@@ -956,65 +1579,77 @@ class BattleController:
         )
 
         text(
+
             surface,
+
             assets.font,
+
             creature.name,
+
             (
-                r.x+7,
-                r.y+6,
+                rect.x + 7,
+                rect.y + 6,
             ),
-            COLORS["ink"],
+
+            COLORS[
+                "ink"
+            ],
+
             shadow=False,
         )
 
         text(
+
             surface,
-            assets.font_small,
-            f"Lv.{creature.level}",
+
+            assets.font_tiny,
+
+            f"LV {creature.level}",
+
             (
-                r.right-6,
-                r.y+7,
+                rect.right - 6,
+                rect.y + 7,
             ),
-            COLORS["ink"],
+
+            COLORS[
+                "ink"
+            ],
+
             "topright",
+
             False,
         )
 
         type_badge(
+
             surface,
-            assets.font_small,
+
+            assets.font_tiny,
+
             creature.element,
+
             (
-                r.x+7,
-                r.y+19,
+                rect.x + 7,
+                rect.y + 19,
                 33,
                 9,
             ),
         )
 
         hp_bar(
+
             surface,
+
             (
-                r.x+44,
-                r.y+20,
-                r.width-52,
+                rect.x + 44,
+                rect.y + 20,
+                rect.width - 52,
                 6,
             ),
-            hp_value/creature.max_hp,
-        )
 
-        text(
-            surface,
-            assets.font_small,
-            f"{max(0,int(round(hp_value)))}/"
-            f"{creature.max_hp}",
-            (
-                r.right-7,
-                r.bottom-4,
-            ),
-            COLORS["ink"],
-            "bottomright",
-            False,
+            hp_value
+            /
+            creature.max_hp,
         )
 
     # ========================================================
@@ -1029,7 +1664,7 @@ class BattleController:
     ):
 
         # ====================================================
-        # CAMPO BATTAGLIA
+        # BACKGROUND
         # ====================================================
 
         surface.fill(
@@ -1071,10 +1706,14 @@ class BattleController:
                     62,
                 ),
                 (
-                    x+8,
+                    x + 8,
                     30
                     +
-                    (x%3)*3,
+                    (
+                        x % 3
+                    )
+                    *
+                    3,
                 ),
                 24,
             )
@@ -1087,19 +1726,25 @@ class BattleController:
                     71,
                 ),
                 (
-                    x+11,
+                    x + 11,
                     22
                     +
-                    (x%2)*4,
+                    (
+                        x % 2
+                    )
+                    *
+                    4,
                 ),
                 18,
             )
 
-        # Fiume
+        # Acqua
 
         pygame.draw.rect(
             surface,
-            COLORS["water"],
+            COLORS[
+                "water"
+            ],
             (
                 0,
                 48,
@@ -1114,9 +1759,15 @@ class BattleController:
             83,
         ):
 
-            off=int(
-                t*24+y
-            )%20
+            offset = (
+                int(
+                    t * 24
+                    +
+                    y
+                )
+                %
+                20
+            )
 
             for x in range(
                 -20,
@@ -1126,74 +1777,24 @@ class BattleController:
 
                 pygame.draw.line(
                     surface,
-                    COLORS["water_light"],
+                    COLORS[
+                        "water_light"
+                    ],
                     (
-                        x+off,
+                        x
+                        +
+                        offset,
                         y,
                     ),
                     (
-                        x+off+16,
+                        x
+                        +
+                        offset
+                        +
+                        16,
                         y,
                     ),
-                    1,
                 )
-
-        # Cascata
-
-        pygame.draw.rect(
-            surface,
-            (
-                88,
-                165,
-                202,
-            ),
-            (
-                246,
-                12,
-                42,
-                47,
-            ),
-        )
-
-        for x in (
-            251,
-            260,
-            274,
-            283,
-        ):
-
-            pygame.draw.line(
-                surface,
-                (
-                    185,
-                    225,
-                    232,
-                ),
-                (
-                    x,
-                    15,
-                ),
-                (
-                    x-3,
-                    56,
-                ),
-                2,
-            )
-
-        pygame.draw.rect(
-            surface,
-            (
-                217,
-                240,
-                239,
-            ),
-            (
-                244,
-                55,
-                47,
-                5,
-            ),
-        )
 
         # Piattaforme
 
@@ -1257,116 +1858,122 @@ class BattleController:
             ),
         )
 
-        # Erba foreground
+        # ====================================================
+        # MOVIMENTO SPRITE
+        # ====================================================
 
-        for x in range(
-            0,
-            320,
-            13,
+        hero_offset = (
+            pygame.Vector2()
+        )
+
+        enemy_offset = (
+            pygame.Vector2()
+        )
+
+        if (
+            self.anim
         ):
 
-            pygame.draw.polygon(
-                surface,
-                (
-                    42,
-                    92,
-                    61,
-                ),
-                [
-                    (
-                        x,
-                        119,
-                    ),
-                    (
-                        x+5,
-                        101,
-                    ),
-                    (
-                        x+9,
-                        119,
-                    ),
-                ],
+            animation = (
+                self.anim
             )
 
-            pygame.draw.polygon(
-                surface,
-                (
-                    67,
-                    128,
-                    70,
-                ),
-                [
-                    (
-                        x+6,
-                        119,
-                    ),
-                    (
-                        x+10,
-                        98,
-                    ),
-                    (
-                        x+14,
-                        119,
-                    ),
-                ],
-            )
+            pulse = math.sin(
 
-        hero_off=pygame.Vector2()
-
-        enemy_off=pygame.Vector2()
-
-        if self.anim:
-
-            anim=self.anim
-
-            pulse=math.sin(
                 min(
                     1,
-                    anim["t"]
+                    animation[
+                        "t"
+                    ]
                     /
-                    anim["duration"],
+                    animation[
+                        "duration"
+                    ],
                 )
+
                 *
+
                 math.pi
             )
 
-            offset=pygame.Vector2(
-                25*pulse,
-                -4*pulse,
+            offset = pygame.Vector2(
+                25 * pulse,
+                -4 * pulse,
             )
 
-            if anim["hero"]:
-                hero_off+=offset
+            if (
+                animation[
+                    "hero"
+                ]
+            ):
+
+                hero_offset += (
+                    offset
+                )
 
             else:
-                enemy_off-=offset
 
-        shake=pygame.Vector2()
+                enemy_offset -= (
+                    offset
+                )
 
-        if self.shake>0:
+        shake = (
+            pygame.Vector2()
+        )
+
+        if (
+            self.shake
+            >
+            0
+        ):
+
             shake.update(
+
                 self.rng.randint(
                     -2,
                     2,
                 ),
+
                 self.rng.randint(
                     -1,
                     1,
                 ),
             )
 
-        enemy_sprite=assets.creature(
-            self.enemy.species,
-            "front",
-            int(t*3)%2,
-            2,
+        # ====================================================
+        # SPRITE
+        # ====================================================
+
+        enemy_sprite = (
+            assets.creature(
+
+                self.enemy.species,
+
+                "front",
+
+                int(
+                    t * 3
+                )
+                % 2,
+
+                2,
+            )
         )
 
-        hero_sprite=assets.creature(
-            self.game.hero.species,
-            "back",
-            int(t*3)%2,
-            2,
+        hero_sprite = (
+            assets.creature(
+
+                self.game.hero.species,
+
+                "back",
+
+                int(
+                    t * 3
+                )
+                % 2,
+
+                2,
+            )
         )
 
         surface.blit(
@@ -1375,14 +1982,15 @@ class BattleController:
                 199
                 +
                 int(
-                    enemy_off.x
+                    enemy_offset.x
                     +
                     shake.x
                 ),
+
                 25
                 +
                 int(
-                    enemy_off.y
+                    enemy_offset.y
                     +
                     shake.y
                 ),
@@ -1395,14 +2003,15 @@ class BattleController:
                 36
                 +
                 int(
-                    hero_off.x
+                    hero_offset.x
                     +
                     shake.x
                 ),
+
                 56
                 +
                 int(
-                    hero_off.y
+                    hero_offset.y
                     +
                     shake.y
                 ),
@@ -1410,161 +2019,173 @@ class BattleController:
         )
 
         # ====================================================
-        # ANIMAZIONE SFERA
+        # CAPTURE BALL
         # ====================================================
 
         if (
-            self.phase=="capture"
+            self.phase
+            ==
+            "capture"
             and
             self.capture_anim
         ):
 
-            capture_t=self.capture_anim[
-                "t"
-            ]
+            capture_t = (
+                self.capture_anim[
+                    "t"
+                ]
+            )
 
-            if capture_t<.58:
+            if (
+                capture_t
+                <
+                .58
+            ):
 
-                p=min(
+                progress = min(
                     1,
-                    capture_t/.58,
+                    capture_t / .58,
                 )
 
-                x=(
+                x = (
                     72
                     +
-                    (225-72)*p
+                    (
+                        225 - 72
+                    )
+                    *
+                    progress
                 )
 
-                y=(
+                y = (
                     88
                     +
-                    (56-88)*p
+                    (
+                        56 - 88
+                    )
+                    *
+                    progress
                     -
                     40
                     *
                     math.sin(
-                        math.pi*p
+                        math.pi
+                        *
+                        progress
                     )
                 )
 
             else:
 
-                p=capture_t-.58
+                elapsed = (
+                    capture_t
+                    -
+                    .58
+                )
 
-                x=(
+                x = (
                     225
                     +
                     math.sin(
-                        p*18
+                        elapsed
+                        *
+                        18
                     )
                     *
                     3
-                    *
-                    (
-                        1
-                        if capture_t<1.35
-                        else .3
-                    )
                 )
 
-                y=60
+                y = 60
 
             surface.blit(
+
                 assets.ball(
-                    int(t*6)%2
+                    int(
+                        t * 6
+                    )
+                    % 2
                 ),
+
                 (
-                    int(x),
-                    int(y),
+                    int(
+                        x
+                    ),
+
+                    int(
+                        y
+                    ),
                 ),
             )
 
-            if (
-                capture_t>.58
-                and
-                self.capture_anim["success"]
-            ):
-
-                fade=min(
-                    190,
-                    int(
-                        (
-                            capture_t-.58
-                        )
-                        *280
-                    ),
-                )
-
-                overlay=pygame.Surface(
-                    (
-                        62,
-                        62,
-                    ),
-                    pygame.SRCALPHA,
-                )
-
-                overlay.fill(
-                    (
-                        255,
-                        255,
-                        255,
-                        fade,
-                    )
-                )
-
-                surface.blit(
-                    overlay,
-                    (
-                        190,
-                        34,
-                    ),
-                )
-
-        # HUD
+        # ====================================================
+        # HUD STATUS
+        # ====================================================
 
         self._status(
+
             surface,
+
             assets,
+
             self.enemy,
+
             (
                 6,
                 5,
                 139,
                 35,
             ),
+
             self.display_enemy_hp,
         )
 
         self._status(
+
             surface,
+
             assets,
+
             self.game.hero,
+
             (
                 175,
                 79,
                 139,
                 35,
             ),
+
             self.display_hero_hp,
         )
 
-        # Particelle
+        # ====================================================
+        # PARTICLES
+        # ====================================================
 
-        for particle in self.particles:
+        for particle in (
+            self.particles
+        ):
 
             pygame.draw.circle(
+
                 surface,
+
                 particle.color,
+
                 (
-                    int(particle.x),
-                    int(particle.y),
+                    int(
+                        particle.x
+                    ),
+
+                    int(
+                        particle.y
+                    ),
                 ),
+
                 particle.size,
             )
 
         # ====================================================
-        # UI INFERIORE
+        # LOWER UI
         # ====================================================
 
         pygame.draw.rect(
@@ -1582,13 +2203,16 @@ class BattleController:
             ),
         )
 
-        # Dialogo
-
         dialogue(
+
             surface,
+
             assets,
+
             self.message,
-            "1-4 mosse",
+
+            "1-4 MOSSE",
+
             rect=(
                 4,
                 120,
@@ -1597,16 +2221,17 @@ class BattleController:
             ),
         )
 
-        # Menu
-
         panel(
+
             surface,
+
             (
                 139,
                 120,
                 177,
                 56,
             ),
+
             (
                 226,
                 231,
@@ -1615,22 +2240,34 @@ class BattleController:
         )
 
         # ====================================================
-        # PULSANTI SEMPRE VISIBILI
+        # INPUT
         # ====================================================
 
         if (
-            self.phase=="input"
+            self.phase
+            ==
+            "input"
             and
-            not self.must_switch
+            not
+            self.must_switch
         ):
 
-            bag_label=(
+            bag_label = (
+
                 "B MOSSE"
-                if self.menu=="bag"
-                else "B ZAINO"
+
+                if
+                self.menu
+                ==
+                "bag"
+
+                else
+
+                "B ZAINO"
             )
 
-            action_buttons=[
+            actions = [
+
                 (
                     (
                         142,
@@ -1638,15 +2275,26 @@ class BattleController:
                         41,
                         14,
                     ),
+
                     "C SFERA",
+
                     (
                         self.wild
+
                         and
-                        self.game.balls>0
+                        self.game.balls
+                        >
+                        0
+
                         and
-                        len(self.game.team)<3
+                        len(
+                            self.game.team
+                        )
+                        <
+                        MAX_TEAM_SIZE
                     ),
                 ),
+
                 (
                     (
                         185,
@@ -1654,9 +2302,12 @@ class BattleController:
                         41,
                         14,
                     ),
+
                     bag_label,
+
                     True,
                 ),
+
                 (
                     (
                         228,
@@ -1664,9 +2315,16 @@ class BattleController:
                         41,
                         14,
                     ),
+
                     "Q TEAM",
-                    len(self.game.team)>1,
+
+                    len(
+                        self.game.team
+                    )
+                    >
+                    1,
                 ),
+
                 (
                     (
                         271,
@@ -1674,7 +2332,9 @@ class BattleController:
                         41,
                         14,
                     ),
+
                     "F FUGA",
+
                     self.wild,
                 ),
             ]
@@ -1683,156 +2343,254 @@ class BattleController:
                 rect,
                 label,
                 enabled,
-            ) in action_buttons:
+            ) in actions:
 
                 button(
+
                     surface,
+
                     assets.font_tiny,
+
                     rect,
+
                     label,
+
                     False,
+
                     enabled,
-                    label.startswith("C "),
+
+                    label.startswith(
+                        "C "
+                    ),
                 )
 
-            # ------------------------------------------------
-            # MOSSE
-            # ------------------------------------------------
+            # ================================================
+            # MOVES
+            # ================================================
 
-            if self.menu=="moves":
+            if (
+                self.menu
+                ==
+                "moves"
+            ):
 
-                for i,move in enumerate(
+                for (
+                    index,
+                    move,
+                ) in enumerate(
                     self.game.hero.moves
                 ):
 
-                    x=(
+                    x = (
                         142
                         +
-                        (i%2)*85
+                        (
+                            index % 2
+                        )
+                        *
+                        85
                     )
 
-                    y=(
+                    y = (
                         141
                         +
-                        (i//2)*17
+                        (
+                            index // 2
+                        )
+                        *
+                        17
                     )
 
-                    pp=self.game.hero.pp[i]
-
-                    name=move["name"]
-
-                    if len(name)>10:
-                        name=name[:9]+"."
-
-                    label=(
-                        f"{i+1} "
-                        f"{name}"
+                    name = (
+                        move[
+                            "name"
+                        ]
                     )
+
+                    if (
+                        len(
+                            name
+                        )
+                        >
+                        10
+                    ):
+
+                        name = (
+                            name[
+                                :9
+                            ]
+                            +
+                            "."
+                        )
 
                     button(
+
                         surface,
-                        assets.font_small,
+
+                        assets.font_tiny,
+
                         (
                             x,
                             y,
                             82,
                             16,
                         ),
-                        label,
+
+                        (
+                            f"{index + 1} "
+                            f"{name}"
+                        ),
+
                         False,
-                        pp>0,
-                        i==1,
+
+                        self.game.hero.pp[
+                            index
+                        ]
+                        >
+                        0,
+
+                        index
+                        ==
+                        1,
                     )
 
-            # ------------------------------------------------
-            # ZAINO
-            # ------------------------------------------------
+            # ================================================
+            # BAG
+            # ================================================
 
             else:
 
                 button(
+
                     surface,
+
                     assets.font_small,
+
                     (
                         142,
                         144,
                         82,
                         27,
                     ),
-                    f"1 SFERA x"
-                    f"{self.game.balls}",
+
+                    (
+                        f"1 SFERA X"
+                        f"{self.game.balls}"
+                    ),
+
                     False,
+
                     (
                         self.wild
+
                         and
-                        self.game.balls>0
+                        self.game.balls
+                        >
+                        0
+
                         and
-                        len(self.game.team)<3
+                        len(
+                            self.game.team
+                        )
+                        <
+                        MAX_TEAM_SIZE
                     ),
+
                     True,
                 )
 
                 button(
+
                     surface,
+
                     assets.font_small,
+
                     (
                         227,
                         144,
                         85,
                         27,
                     ),
-                    f"2 POZIONE x"
-                    f"{self.game.potions}",
+
+                    (
+                        f"2 CURA X"
+                        f"{self.game.potions}"
+                    ),
+
                     False,
-                    self.game.potions>0,
+
+                    self.game.potions
+                    >
+                    0,
+
                     False,
                 )
 
-        # Cambio obbligatorio
+        # ====================================================
+        # MUST SWITCH
+        # ====================================================
 
-        elif self.must_switch:
+        elif (
+            self.must_switch
+        ):
 
             button(
+
                 surface,
+
                 assets.font_small,
+
                 (
                     150,
                     139,
                     155,
                     27,
                 ),
+
                 "Q SCEGLI COMPAGNO",
+
                 True,
+
                 True,
+
                 True,
             )
 
-        # Attesa
-
-        elif self.phase in (
-            "anim",
-            "delay",
-            "capture",
-        ):
+        else:
 
             text(
+
                 surface,
+
                 assets.font_small,
-                "Attendi...",
+
+                "ATTENDI...",
+
                 (
                     227,
                     150,
                 ),
-                COLORS["ink"],
+
+                COLORS[
+                    "ink"
+                ],
+
                 "center",
+
                 False,
             )
 
-        # Flash impatto
+        # ====================================================
+        # FLASH
+        # ====================================================
 
-        if self.flash>0:
+        if (
+            self.flash
+            >
+            0
+        ):
 
-            overlay=pygame.Surface(
+            overlay = pygame.Surface(
                 (
                     320,
                     180,
@@ -1846,10 +2604,15 @@ class BattleController:
                     247,
                     223,
                     int(
+
                         120
+
                         *
+
                         self.flash
+
                         /
+
                         .12
                     ),
                 )

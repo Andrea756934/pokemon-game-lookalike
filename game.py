@@ -20,7 +20,7 @@ from settings import (
 )
 
 from assets import Assets
-from data import STARTERS, SPECIES, TRAINERS
+from data import STARTERS, TRAINERS
 from models import Creature, Particle, NPC
 from world import World
 from battle import BattleController
@@ -33,6 +33,13 @@ from ui import (
     dialogue,
     type_badge,
 )
+
+
+# ============================================================
+# CONFIG
+# ============================================================
+
+MAX_TEAM_SIZE = 6
 
 
 class Game:
@@ -78,9 +85,19 @@ class Game:
 
         self.return_state = "world"
 
+        # ====================================================
+        # SQUADRA
+        # ====================================================
+
         self.team = []
 
         self.active = 0
+
+        self.team_select = 0
+
+        # ====================================================
+        # INVENTARIO
+        # ====================================================
 
         self.balls = 8
 
@@ -88,11 +105,19 @@ class Game:
 
         self.coins = 60
 
+        # ====================================================
+        # PROGRESSO
+        # ====================================================
+
         self.defeated = set()
 
         self.open_chests = set()
 
         self.completed = False
+
+        # ====================================================
+        # PLAYER
+        # ====================================================
 
         self.player_pos = pygame.Vector2(
             *self.world.spawn
@@ -113,6 +138,10 @@ class Game:
         )
 
         self.world_particles = []
+
+        # ====================================================
+        # UI
+        # ====================================================
 
         self.notice = (
             "Scegli il tuo primo compagno."
@@ -135,8 +164,6 @@ class Game:
         )
 
         self.starter_select = 0
-
-        self.team_select = 0
 
     # ========================================================
     # HERO
@@ -166,6 +193,8 @@ class Game:
         ]
 
         self.active = 0
+
+        self.team_select = 0
 
         self.balls = 8
 
@@ -221,7 +250,6 @@ class Game:
             "team":
                 [
                     creature.serialize()
-
                     for creature
                     in self.team
                 ],
@@ -325,6 +353,13 @@ class Game:
                 in data["team"]
             ]
 
+            # Protezione:
+            # massimo 6 creature.
+
+            self.team = self.team[
+                :MAX_TEAM_SIZE
+            ]
+
             self.active = max(
 
                 0,
@@ -341,6 +376,10 @@ class Game:
                         )
                     ),
                 ),
+            )
+
+            self.team_select = (
+                self.active
             )
 
             self.player_pos.update(
@@ -505,7 +544,7 @@ class Game:
             self.transition_dir = 0
 
     # ========================================================
-    # SPAWN
+    # PLAYER
     # ========================================================
 
     def reset_to_spawn(self):
@@ -925,10 +964,7 @@ class Game:
             for particle
             in self.world_particles
 
-            if (
-                particle.life
-                > 0
-            )
+            if particle.life > 0
         ]
 
         if (
@@ -943,7 +979,7 @@ class Game:
             )
 
     # ========================================================
-    # INTERACT
+    # INTERAZIONE
     # ========================================================
 
     def interact(self):
@@ -986,11 +1022,10 @@ class Game:
                 )
 
                 self.notice = (
-                    "Squadra curata. "
-                    "Le scorte base sono state ripristinate."
+                    "Squadra curata."
                 )
 
-                self.notice_timer = 4
+                self.notice_timer = 3
 
                 self.save()
 
@@ -1000,12 +1035,10 @@ class Game:
             ):
 
                 self.notice = (
-                    "Guida: Mira nel bosco, "
-                    "Nerio oltre il ponte, "
-                    "Alba al santuario."
+                    "Guida: Mira, Nerio e poi Alba."
                 )
 
-                self.notice_timer = 5
+                self.notice_timer = 4
 
             elif (
                 entity.trainer_index
@@ -1035,10 +1068,10 @@ class Game:
             ):
 
                 self.notice = (
-                    "Il baule e' gia' vuoto."
+                    "Il baule e' vuoto."
                 )
 
-                self.notice_timer = 2.5
+                self.notice_timer = 2
 
             else:
 
@@ -1053,10 +1086,7 @@ class Game:
                 self.coins += 20
 
                 self.notice = (
-                    "Baule trovato: "
-                    "+3 Sfere, "
-                    "+2 Pozioni, "
-                    "+20 monete!"
+                    "+3 Sfere | +2 Cure | +20 monete"
                 )
 
                 self.notice_timer = 4
@@ -1066,14 +1096,13 @@ class Game:
             return
 
         self.notice = (
-            "Non c'e' nulla "
-            "da esaminare qui."
+            "Non c'e' nulla qui."
         )
 
         self.notice_timer = 2
 
     # ========================================================
-    # TRAINERS
+    # TRAINER
     # ========================================================
 
     def challenge(
@@ -1120,11 +1149,10 @@ class Game:
         ):
 
             self.notice = (
-                "Alba: torna con le medaglie "
-                "di Mira e Nerio."
+                "Alba: torna con le due medaglie."
             )
 
-            self.notice_timer = 4
+            self.notice_timer = 3
 
             return
 
@@ -1168,7 +1196,7 @@ class Game:
         )
 
         if (
-            tx < 20
+            tx < 39
         ):
 
             pool = (
@@ -1184,7 +1212,7 @@ class Game:
 
             low = 3
 
-            high = 5
+            high = 6
 
         else:
 
@@ -1201,11 +1229,11 @@ class Game:
 
             low = 5
 
-            high = 7
+            high = 8
 
         level = min(
 
-            11,
+            12,
 
             self.rng.randint(
                 low,
@@ -1238,8 +1266,7 @@ class Game:
             None,
 
             (
-                f"Un {enemy.name} "
-                "selvatico appare!"
+                f"Un {enemy.name} selvatico appare!"
             ),
         )
 
@@ -1256,8 +1283,7 @@ class Game:
 
         if not any(
 
-            creature.hp
-            > 0
+            creature.hp > 0
 
             for creature
             in self.team
@@ -1282,10 +1308,7 @@ class Game:
                     self.team
                 )
 
-                if (
-                    creature.hp
-                    > 0
-                )
+                if creature.hp > 0
             )
 
         self.battle = BattleController(
@@ -1326,6 +1349,70 @@ class Game:
             else
             "world"
         )
+
+    # ========================================================
+    # CAMBIO CREATURE
+    # ========================================================
+
+    def choose_team_member(
+        self,
+        index,
+    ):
+
+        if not (
+            0
+            <= index
+            <
+            len(
+                self.team
+            )
+        ):
+
+            return False
+
+        creature = (
+            self.team[
+                index
+            ]
+        )
+
+        if (
+            creature.hp
+            <= 0
+        ):
+
+            return False
+
+        if (
+            self.return_state
+            == "battle"
+            and
+            self.battle
+        ):
+
+            if (
+                self.battle.switch(
+                    index
+                )
+            ):
+
+                self.state = (
+                    "battle"
+                )
+
+                return True
+
+            return False
+
+        self.active = (
+            index
+        )
+
+        self.state = (
+            self.return_state
+        )
+
+        return True
 
     # ========================================================
     # DRAW WORLD
@@ -1369,12 +1456,14 @@ class Game:
                 (
                     int(
                         particle.x
-                        - camera_x
+                        -
+                        camera_x
                     ),
 
                     int(
                         particle.y
-                        - camera_y
+                        -
+                        camera_y
                     ),
 
                     particle.size,
@@ -1397,15 +1486,19 @@ class Game:
         player_x = int(
 
             self.player_pos.x
-            - camera_x
-            - 8
+            -
+            camera_x
+            -
+            8
         )
 
         player_y = int(
 
             self.player_pos.y
-            - camera_y
-            - 16
+            -
+            camera_y
+            -
+            16
         )
 
         self.canvas.blit(
@@ -1436,124 +1529,18 @@ class Game:
 
                 self.notice,
 
-                "E interagisci",
+                "E INTERAGISCI",
             )
 
     # ========================================================
-    # HUD WORLD
+    # HUD
     # ========================================================
 
     def draw_world_hud(self):
 
-        # ----------------------------------------------------
-        # SQUADRA IN ALTO A DESTRA
-        # ----------------------------------------------------
-
-        x = (
-            BASE_W - 5
-        )
-
-        for (
-            index,
-            creature,
-        ) in reversed(
-            list(
-                enumerate(
-                    self.team
-                )
-            )
-        ):
-
-            width = 63
-
-            height = 20
-
-            x0 = (
-                x - width
-            )
-
-            rect = panel(
-
-                self.canvas,
-
-                (
-                    x0,
-                    5 + index * 23,
-                    width,
-                    height,
-                ),
-
-                (
-                    235,
-                    233,
-                    210,
-                ),
-            )
-
-            icon = (
-                self.assets.creature(
-                    creature.species,
-                    "front",
-                    0,
-                    1,
-                )
-            )
-
-            icon = pygame.transform.scale(
-                icon,
-                (
-                    17,
-                    17,
-                ),
-            )
-
-            self.canvas.blit(
-                icon,
-                (
-                    x0 + 2,
-                    rect.y + 1,
-                ),
-            )
-
-            text(
-
-                self.canvas,
-
-                self.assets.font_small,
-
-                creature.name,
-
-                (
-                    x0 + 21,
-                    rect.y + 3,
-                ),
-
-                COLORS[
-                    "ink"
-                ],
-
-                shadow=False,
-            )
-
-            hp_bar(
-
-                self.canvas,
-
-                (
-                    x0 + 21,
-                    rect.y + 12,
-                    36,
-                    4,
-                ),
-
-                creature.hp
-                /
-                creature.max_hp,
-            )
-
-        # ----------------------------------------------------
-        # INVENTARIO IN ALTO A SINISTRA
-        # ----------------------------------------------------
+        # ====================================================
+        # INVENTARIO
+        # ====================================================
 
         badges = len(
 
@@ -1590,7 +1577,10 @@ class Game:
 
             self.assets.font_small,
 
-            f"Sfere {self.balls} | Cure {self.potions}",
+            (
+                f"SFERE {self.balls} "
+                f"| CURE {self.potions}"
+            ),
 
             (
                 9,
@@ -1610,7 +1600,9 @@ class Game:
 
             self.assets.font_small,
 
-            f"Medaglie {badges}/2",
+            (
+                f"MEDAGLIE {badges}/2"
+            ),
 
             (
                 9,
@@ -1622,6 +1614,128 @@ class Game:
             ],
 
             shadow=False,
+        )
+
+        # ====================================================
+        # CREATURE ATTIVA
+        # ====================================================
+
+        if not self.team:
+
+            return
+
+        creature = (
+            self.hero
+        )
+
+        x = (
+            BASE_W - 70
+        )
+
+        panel(
+
+            self.canvas,
+
+            (
+                x,
+                5,
+                65,
+                22,
+            ),
+
+            (
+                235,
+                233,
+                210,
+            ),
+        )
+
+        icon = (
+            pygame.transform.scale(
+
+                self.assets.creature(
+                    creature.species,
+                    "front",
+                    0,
+                    1,
+                ),
+
+                (
+                    18,
+                    18,
+                ),
+            )
+        )
+
+        self.canvas.blit(
+            icon,
+            (
+                x + 2,
+                7,
+            ),
+        )
+
+        text(
+
+            self.canvas,
+
+            self.assets.font_small,
+
+            creature.name,
+
+            (
+                x + 22,
+                9,
+            ),
+
+            COLORS[
+                "ink"
+            ],
+
+            shadow=False,
+        )
+
+        hp_bar(
+
+            self.canvas,
+
+            (
+                x + 22,
+                17,
+                37,
+                4,
+            ),
+
+            creature.hp
+            /
+            creature.max_hp,
+        )
+
+        # Indicatore numero squadra
+
+        text(
+
+            self.canvas,
+
+            self.assets.font_tiny,
+
+            (
+                f"{len(self.team)}/"
+                f"{MAX_TEAM_SIZE}"
+            ),
+
+            (
+                x + 59,
+                24,
+            ),
+
+            COLORS[
+                "white"
+            ],
+
+            "bottomright",
+
+            False,
         )
 
     # ========================================================
@@ -1770,10 +1884,7 @@ class Game:
 
             self.assets.font,
 
-            (
-                "Esplora. Cattura. "
-                "Cresci insieme."
-            ),
+            "ESPLORA. CATTURA. CRESCI INSIEME.",
 
             (
                 160,
@@ -1807,7 +1918,8 @@ class Game:
 
                     int(
                         t * 3
-                        + index
+                        +
+                        index
                     )
                     % 2,
 
@@ -1821,7 +1933,8 @@ class Game:
 
                 (
                     47
-                    + index
+                    +
+                    index
                     * 90,
 
                     73
@@ -1829,7 +1942,8 @@ class Game:
                     int(
                         math.sin(
                             t * 2
-                            + index
+                            +
+                            index
                         )
                         * 2
                     ),
@@ -1867,7 +1981,8 @@ class Game:
 
                 (
                     72
-                    + index
+                    +
+                    index
                     * 92,
 
                     149,
@@ -1935,7 +2050,8 @@ class Game:
 
             x = (
                 8
-                + index
+                +
+                index
                 * 104
             )
 
@@ -1957,16 +2073,16 @@ class Game:
                 ),
 
                 (
-                    239,
-                    233,
-                    207,
-                )
-                if not selected
-                else
-                (
                     224,
                     239,
                     198,
+                )
+                if selected
+                else
+                (
+                    239,
+                    233,
+                    207,
                 ),
             )
 
@@ -2040,31 +2156,6 @@ class Game:
                 ),
             )
 
-            text(
-
-                self.canvas,
-
-                self.assets.font_small,
-
-                (
-                    f"PS {creature.max_hp} "
-                    f"ATK {creature.attack}"
-                ),
-
-                (
-                    x + 48,
-                    147,
-                ),
-
-                COLORS[
-                    "ink"
-                ],
-
-                "center",
-
-                False,
-            )
-
             if selected:
 
                 pygame.draw.rect(
@@ -2082,35 +2173,8 @@ class Game:
                     border_radius=3,
                 )
 
-        text(
-
-            self.canvas,
-
-            self.assets.font_small,
-
-            (
-                "A/D scegli | "
-                "INVIO conferma"
-            ),
-
-            (
-                160,
-                174,
-            ),
-
-            (
-                226,
-                228,
-                210,
-            ),
-
-            "center",
-
-            False,
-        )
-
     # ========================================================
-    # TEAM
+    # TEAM - 6 CREATURE
     # ========================================================
 
     def draw_team(self):
@@ -2146,10 +2210,10 @@ class Game:
 
         overlay.fill(
             (
-                12,
-                24,
-                29,
-                170,
+                10,
+                20,
+                25,
+                185,
             )
         )
 
@@ -2166,10 +2230,10 @@ class Game:
             self.canvas,
 
             (
-                26,
-                18,
-                268,
-                144,
+                8,
+                8,
+                304,
+                164,
             ),
 
             (
@@ -2188,25 +2252,59 @@ class Game:
             "SQUADRA",
 
             (
-                40,
-                30,
+                160,
+                20,
             ),
 
             COLORS[
                 "ink"
             ],
 
-            shadow=False,
+            "center",
+
+            False,
         )
 
+        # ====================================================
+        # 6 SLOT:
+        #
+        # 1  4
+        # 2  5
+        # 3  6
+        #
+        # ====================================================
+
         for index in range(
-            3
+            MAX_TEAM_SIZE
         ):
 
+            column = (
+                index // 3
+            )
+
+            row = (
+                index % 3
+            )
+
+            x = (
+                17
+                +
+                column
+                * 145
+            )
+
             y = (
-                52
-                + index
-                * 34
+                37
+                +
+                row
+                * 38
+            )
+
+            rect = pygame.Rect(
+                x,
+                y,
+                140,
+                34,
             )
 
             selected = (
@@ -2220,27 +2318,51 @@ class Game:
                 self.canvas,
 
                 (
-                    219,
-                    228,
-                    199,
+                    216,
+                    232,
+                    194,
                 )
                 if selected
                 else
                 (
-                    232,
+                    231,
                     229,
                     211,
                 ),
 
-                (
-                    39,
-                    y,
-                    242,
-                    29,
-                ),
+                rect,
 
                 border_radius=3,
             )
+
+            pygame.draw.rect(
+
+                self.canvas,
+
+                COLORS[
+                    "accent"
+                ]
+                if selected
+                else
+                (
+                    110,
+                    122,
+                    112,
+                ),
+
+                rect,
+
+                2
+                if selected
+                else
+                1,
+
+                border_radius=3,
+            )
+
+            # ================================================
+            # CREATURE PRESENTE
+            # ================================================
 
             if (
                 index
@@ -2267,8 +2389,8 @@ class Game:
                         ),
 
                         (
-                            24,
-                            24,
+                            28,
+                            28,
                         ),
                     )
                 )
@@ -2276,8 +2398,8 @@ class Game:
                 self.canvas.blit(
                     image,
                     (
-                        42,
-                        y + 2,
+                        x + 3,
+                        y + 3,
                     ),
                 )
 
@@ -2288,14 +2410,35 @@ class Game:
                     self.assets.font,
 
                     (
-                        f"{index + 1}. "
-                        f"{creature.name} "
-                        f"Lv.{creature.level}"
+                        f"{index + 1} "
+                        f"{creature.name}"
                     ),
 
                     (
-                        71,
+                        x + 34,
                         y + 5,
+                    ),
+
+                    COLORS[
+                        "ink"
+                    ],
+
+                    shadow=False,
+                )
+
+                text(
+
+                    self.canvas,
+
+                    self.assets.font_tiny,
+
+                    (
+                        f"LV {creature.level}"
+                    ),
+
+                    (
+                        x + 34,
+                        y + 14,
                     ),
 
                     COLORS[
@@ -2310,9 +2453,9 @@ class Game:
                     self.canvas,
 
                     (
-                        71,
-                        y + 17,
-                        87,
+                        x + 34,
+                        y + 23,
+                        59,
                         4,
                     ),
 
@@ -2325,7 +2468,7 @@ class Game:
 
                     self.canvas,
 
-                    self.assets.font_small,
+                    self.assets.font_tiny,
 
                     (
                         f"{creature.hp}/"
@@ -2333,8 +2476,8 @@ class Game:
                     ),
 
                     (
-                        163,
-                        y + 16,
+                        x + 97,
+                        y + 22,
                     ),
 
                     COLORS[
@@ -2354,13 +2497,13 @@ class Game:
 
                         self.canvas,
 
-                        self.assets.font_small,
+                        self.assets.font_tiny,
 
                         "ATTIVO",
 
                         (
-                            272,
-                            y + 8,
+                            rect.right - 4,
+                            rect.top + 4,
                         ),
 
                         COLORS[
@@ -2371,6 +2514,61 @@ class Game:
 
                         False,
                     )
+
+            # ================================================
+            # SLOT VUOTO
+            # ================================================
+
+            else:
+
+                text(
+
+                    self.canvas,
+
+                    self.assets.font,
+
+                    (
+                        f"{index + 1} VUOTO"
+                    ),
+
+                    rect.center,
+
+                    (
+                        113,
+                        116,
+                        108,
+                    ),
+
+                    "center",
+
+                    False,
+                )
+
+        text(
+
+            self.canvas,
+
+            self.assets.font_tiny,
+
+            (
+                "1-6 SELEZIONA | "
+                "FRECCE MUOVI | "
+                "INVIO CONFERMA"
+            ),
+
+            (
+                160,
+                160,
+            ),
+
+            COLORS[
+                "ink"
+            ],
+
+            "center",
+
+            False,
+        )
 
     # ========================================================
     # HELP
@@ -2393,7 +2591,7 @@ class Game:
                 10,
                 20,
                 25,
-                175,
+                180,
             )
         )
 
@@ -2432,7 +2630,7 @@ class Game:
             "TACCUINO",
 
             (
-                38,
+                160,
                 26,
             ),
 
@@ -2440,30 +2638,32 @@ class Game:
                 "ink"
             ],
 
-            shadow=False,
+            "center",
+
+            False,
         )
 
         lines = [
 
-            "WASD/Frecce = muovi",
+            "WASD / FRECCE = MUOVI",
 
-            "E/Invio = interagisci",
+            "E / INVIO = INTERAGISCI",
 
-            "Q = squadra",
+            "Q = SQUADRA",
 
-            "P = pozione",
+            "P = POZIONE",
 
-            "1-4 = mosse",
+            "1-4 = MOSSE",
 
-            "C = lancia sfera",
+            "C = LANCIA SFERA",
 
-            "B = zaino",
+            "B = ZAINO",
 
-            "F = fuga",
+            "F = FUGA",
 
-            "F5 = salva",
+            "SQUADRA MASSIMA = 6",
 
-            "F11 = fullscreen",
+            "F5 = SALVA",
         ]
 
         for (
@@ -2483,8 +2683,9 @@ class Game:
 
                 (
                     42,
-                    48
-                    + index
+                    47
+                    +
+                    index
                     * 10,
                 ),
 
@@ -2568,28 +2769,6 @@ class Game:
             False,
         )
 
-        text(
-
-            self.canvas,
-
-            self.assets.font_small,
-
-            "ESC per continuare",
-
-            (
-                160,
-                100,
-            ),
-
-            COLORS[
-                "ink"
-            ],
-
-            "center",
-
-            False,
-        )
-
     # ========================================================
     # ENDING
     # ========================================================
@@ -2650,10 +2829,7 @@ class Game:
 
             self.assets.font,
 
-            (
-                "Alba ti affida la protezione "
-                "di Selvaluce."
-            ),
+            "HAI COMPLETATO SELVALUCE!",
 
             (
                 160,
@@ -2692,7 +2868,8 @@ class Game:
                         self.transition,
                     ),
                 )
-            ) ** 3
+            )
+            ** 3
         )
 
         stripe_height = (
@@ -2718,20 +2895,24 @@ class Game:
 
                     (
                         t
-                        - delay
+                        -
+                        delay
                     )
                     /
                     (
                         1
-                        - 7
-                        * .05
+                        -
+                        7
+                        *
+                        .05
                     ),
                 ),
             )
 
             width = int(
                 BASE_W
-                * local
+                *
+                local
             )
 
             rect = pygame.Rect(
@@ -2744,7 +2925,8 @@ class Game:
 
                 int(
                     index
-                    * stripe_height
+                    *
+                    stripe_height
                 ),
 
                 width,
@@ -2752,7 +2934,8 @@ class Game:
                 math.ceil(
                     stripe_height
                 )
-                + 1,
+                +
+                1,
             )
 
             pygame.draw.rect(
@@ -2769,7 +2952,7 @@ class Game:
             )
 
     # ========================================================
-    # INPUT
+    # KEYBOARD
     # ========================================================
 
     def handle_keydown(
@@ -2779,7 +2962,8 @@ class Game:
 
         if (
             key
-            == pygame.K_F11
+            ==
+            pygame.K_F11
         ):
 
             self.toggle_fullscreen()
@@ -2790,19 +2974,21 @@ class Game:
 
             return
 
+        # ====================================================
+        # TITLE
+        # ====================================================
+
         if (
             self.state
-            == "title"
+            ==
+            "title"
         ):
 
             if key in (
 
                 pygame.K_LEFT,
-
                 pygame.K_a,
-
                 pygame.K_RIGHT,
-
                 pygame.K_d,
 
             ):
@@ -2816,37 +3002,41 @@ class Game:
             elif key in (
 
                 pygame.K_RETURN,
-
                 pygame.K_SPACE,
 
             ):
 
                 if (
                     self.title_select
-                    == 0
-
+                    ==
+                    0
                     and
                     SAVE_FILE.exists()
-
-                    and
-                    self.load()
                 ):
 
-                    return
+                    if (
+                        self.load()
+                    ):
+
+                        return
 
                 self.state = (
                     "starter"
                 )
 
+        # ====================================================
+        # STARTER
+        # ====================================================
+
         elif (
             self.state
-            == "starter"
+            ==
+            "starter"
         ):
 
             if key in (
 
                 pygame.K_LEFT,
-
                 pygame.K_a,
 
             ):
@@ -2854,14 +3044,14 @@ class Game:
                 self.starter_select = (
 
                     self.starter_select
-                    - 1
+                    -
+                    1
 
                 ) % 3
 
             elif key in (
 
                 pygame.K_RIGHT,
-
                 pygame.K_d,
 
             ):
@@ -2869,14 +3059,14 @@ class Game:
                 self.starter_select = (
 
                     self.starter_select
-                    + 1
+                    +
+                    1
 
                 ) % 3
 
             elif key in (
 
                 pygame.K_RETURN,
-
                 pygame.K_SPACE,
 
             ):
@@ -2890,24 +3080,28 @@ class Game:
 
             elif (
                 key
-                == pygame.K_ESCAPE
+                ==
+                pygame.K_ESCAPE
             ):
 
                 self.state = (
                     "title"
                 )
 
+        # ====================================================
+        # WORLD
+        # ====================================================
+
         elif (
             self.state
-            == "world"
+            ==
+            "world"
         ):
 
             if key in (
 
                 pygame.K_e,
-
                 pygame.K_RETURN,
-
                 pygame.K_SPACE,
 
             ):
@@ -2916,7 +3110,8 @@ class Game:
 
             elif (
                 key
-                == pygame.K_q
+                ==
+                pygame.K_q
             ):
 
                 self.return_state = (
@@ -2933,7 +3128,8 @@ class Game:
 
             elif (
                 key
-                == pygame.K_h
+                ==
+                pygame.K_h
             ):
 
                 self.return_state = (
@@ -2946,13 +3142,18 @@ class Game:
 
             elif (
                 key
-                == pygame.K_p
+                ==
+                pygame.K_p
             ):
 
                 if (
-                    self.potions > 0
+                    self.potions
+                    >
+                    0
                     and
-                    self.hero.hp > 0
+                    self.hero.hp
+                    >
+                    0
                     and
                     self.hero.hp
                     <
@@ -2975,8 +3176,7 @@ class Game:
                     )
 
                     self.notice = (
-                        f"{self.hero.name} "
-                        f"recupera {amount} PS."
+                        f"{self.hero.name} +{amount} PS"
                     )
 
                     self.notice_timer = 3
@@ -2985,29 +3185,36 @@ class Game:
 
             elif (
                 key
-                == pygame.K_F5
+                ==
+                pygame.K_F5
             ):
 
                 self.save()
 
                 self.notice = (
-                    "Partita salvata."
+                    "PARTITA SALVATA"
                 )
 
                 self.notice_timer = 2
 
             elif (
                 key
-                == pygame.K_ESCAPE
+                ==
+                pygame.K_ESCAPE
             ):
 
                 self.state = (
                     "pause"
                 )
 
+        # ====================================================
+        # BATTLE
+        # ====================================================
+
         elif (
             self.state
-            == "battle"
+            ==
+            "battle"
             and
             self.battle
         ):
@@ -3024,11 +3231,10 @@ class Game:
                     pygame.K_3,
                     pygame.K_4,
                 )
-
                 and
                 battle.phase
-                == "input"
-
+                ==
+                "input"
                 and
                 not
                 battle.must_switch
@@ -3042,7 +3248,8 @@ class Game:
 
                 if (
                     battle.menu
-                    == "moves"
+                    ==
+                    "moves"
                 ):
 
                     battle.choose_move(
@@ -3053,42 +3260,56 @@ class Game:
 
                     if (
                         index
-                        == 0
+                        ==
+                        0
                     ):
 
                         battle.capture()
 
                     elif (
                         index
-                        == 1
+                        ==
+                        1
                     ):
 
                         battle.use_potion()
 
             elif (
                 key
-                == pygame.K_c
+                ==
+                pygame.K_c
             ):
 
                 battle.capture()
 
             elif (
                 key
-                == pygame.K_b
+                ==
+                pygame.K_b
+                and
+                battle.phase
+                ==
+                "input"
             ):
 
                 battle.menu = (
+
                     "bag"
+
                     if
                     battle.menu
-                    == "moves"
+                    ==
+                    "moves"
+
                     else
+
                     "moves"
                 )
 
             elif (
                 key
-                == pygame.K_q
+                ==
+                pygame.K_q
             ):
 
                 self.return_state = (
@@ -3105,99 +3326,168 @@ class Game:
 
             elif (
                 key
-                == pygame.K_f
+                ==
+                pygame.K_f
             ):
 
                 battle.run()
 
+        # ====================================================
+        # TEAM
+        # ====================================================
+
         elif (
             self.state
-            == "team"
+            ==
+            "team"
         ):
+
+            # ------------------------------------------------
+            # 1-6 = selezione diretta
+            # ------------------------------------------------
 
             if key in (
 
-                pygame.K_UP,
+                pygame.K_1,
+                pygame.K_2,
+                pygame.K_3,
+                pygame.K_4,
+                pygame.K_5,
+                pygame.K_6,
 
+            ):
+
+                index = (
+                    key
+                    -
+                    pygame.K_1
+                )
+
+                self.team_select = (
+                    index
+                )
+
+                self.choose_team_member(
+                    index
+                )
+
+            # ------------------------------------------------
+            # SU
+            # ------------------------------------------------
+
+            elif key in (
+
+                pygame.K_UP,
                 pygame.K_w,
 
             ):
 
-                self.team_select = (
-
+                column = (
                     self.team_select
-                    - 1
+                    //
+                    3
+                )
 
+                row = (
+                    self.team_select
+                    %
+                    3
+                )
+
+                row = (
+                    row - 1
                 ) % 3
+
+                self.team_select = (
+                    column
+                    *
+                    3
+                    +
+                    row
+                )
+
+            # ------------------------------------------------
+            # GIU
+            # ------------------------------------------------
 
             elif key in (
 
                 pygame.K_DOWN,
-
                 pygame.K_s,
 
             ):
 
-                self.team_select = (
-
+                column = (
                     self.team_select
-                    + 1
+                    //
+                    3
+                )
 
+                row = (
+                    self.team_select
+                    %
+                    3
+                )
+
+                row = (
+                    row + 1
                 ) % 3
+
+                self.team_select = (
+                    column
+                    *
+                    3
+                    +
+                    row
+                )
+
+            # ------------------------------------------------
+            # SINISTRA / DESTRA
+            # ------------------------------------------------
 
             elif key in (
 
-                pygame.K_RETURN,
-
-                pygame.K_SPACE,
+                pygame.K_LEFT,
+                pygame.K_a,
+                pygame.K_RIGHT,
+                pygame.K_d,
 
             ):
 
                 if (
                     self.team_select
                     <
-                    len(
-                        self.team
-                    )
+                    3
                 ):
 
-                    if (
-                        self.return_state
-                        == "battle"
+                    self.team_select += 3
 
-                        and
-                        self.battle
-                    ):
+                else:
 
-                        if (
-                            self.battle.switch(
-                                self.team_select
-                            )
-                        ):
+                    self.team_select -= 3
 
-                            self.state = (
-                                "battle"
-                            )
+            # ------------------------------------------------
+            # CONFERMA
+            # ------------------------------------------------
 
-                    elif (
-                        self.team[
-                            self.team_select
-                        ].hp
-                        > 0
-                    ):
+            elif key in (
 
-                        self.active = (
-                            self.team_select
-                        )
+                pygame.K_RETURN,
+                pygame.K_SPACE,
 
-                        self.state = (
-                            self.return_state
-                        )
+            ):
+
+                self.choose_team_member(
+                    self.team_select
+                )
+
+            # ------------------------------------------------
+            # ESC
+            # ------------------------------------------------
 
             elif key in (
 
                 pygame.K_ESCAPE,
-
                 pygame.K_q,
 
             ):
@@ -3206,17 +3496,20 @@ class Game:
                     self.return_state
                 )
 
+        # ====================================================
+        # HELP
+        # ====================================================
+
         elif (
             self.state
-            == "help"
+            ==
+            "help"
         ):
 
             if key in (
 
                 pygame.K_ESCAPE,
-
                 pygame.K_h,
-
                 pygame.K_RETURN,
 
             ):
@@ -3225,31 +3518,40 @@ class Game:
                     self.return_state
                 )
 
+        # ====================================================
+        # PAUSE
+        # ====================================================
+
         elif (
             self.state
-            == "pause"
+            ==
+            "pause"
         ):
 
             if (
                 key
-                == pygame.K_ESCAPE
+                ==
+                pygame.K_ESCAPE
             ):
 
                 self.state = (
                     "world"
                 )
 
+        # ====================================================
+        # ENDING
+        # ====================================================
+
         elif (
             self.state
-            == "ending"
+            ==
+            "ending"
         ):
 
             if key in (
 
                 pygame.K_RETURN,
-
                 pygame.K_SPACE,
-
                 pygame.K_ESCAPE,
 
             ):
@@ -3265,10 +3567,13 @@ class Game:
     def toggle_fullscreen(self):
 
         self.fullscreen = (
-            not self.fullscreen
+            not
+            self.fullscreen
         )
 
-        if self.fullscreen:
+        if (
+            self.fullscreen
+        ):
 
             self.window = (
                 pygame.display.set_mode(
@@ -3297,7 +3602,7 @@ class Game:
             )
 
     # ========================================================
-    # MOUSE CONVERSION
+    # WINDOW -> LOGICAL
     # ========================================================
 
     def window_to_logical(
@@ -3318,22 +3623,26 @@ class Game:
                 min(
 
                     window_width
-                    / BASE_W,
+                    /
+                    BASE_W,
 
                     window_height
-                    / BASE_H,
+                    /
+                    BASE_H,
                 )
             ),
         )
 
         scaled_width = (
             BASE_W
-            * scale
+            *
+            scale
         )
 
         scaled_height = (
             BASE_H
-            * scale
+            *
+            scale
         )
 
         offset_x = (
@@ -3355,21 +3664,31 @@ class Game:
         x = (
 
             pos[0]
-            - offset_x
+            -
+            offset_x
 
         ) / scale
 
         y = (
 
             pos[1]
-            - offset_y
+            -
+            offset_y
 
         ) / scale
 
         if not (
-            0 <= x < BASE_W
+            0
+            <=
+            x
+            <
+            BASE_W
             and
-            0 <= y < BASE_H
+            0
+            <=
+            y
+            <
+            BASE_H
         ):
 
             return None
@@ -3409,9 +3728,12 @@ class Game:
             logical
         )
 
+        # TITLE
+
         if (
             self.state
-            == "title"
+            ==
+            "title"
         ):
 
             for index in range(
@@ -3421,8 +3743,10 @@ class Game:
                 rect = pygame.Rect(
 
                     72
-                    + index
-                    * 92,
+                    +
+                    index
+                    *
+                    92,
 
                     149,
 
@@ -3439,7 +3763,9 @@ class Game:
                 ):
 
                     if (
-                        index == 1
+                        index
+                        ==
+                        1
                         or
                         SAVE_FILE.exists()
                     ):
@@ -3450,9 +3776,12 @@ class Game:
 
                     return
 
+        # STARTER
+
         elif (
             self.state
-            == "starter"
+            ==
+            "starter"
         ):
 
             for index in range(
@@ -3462,8 +3791,10 @@ class Game:
                 rect = pygame.Rect(
 
                     8
-                    + index
-                    * 104,
+                    +
+                    index
+                    *
+                    104,
 
                     38,
 
@@ -3485,26 +3816,43 @@ class Game:
 
                     return
 
+        # TEAM 6
+
         elif (
             self.state
-            == "team"
+            ==
+            "team"
         ):
 
             for index in range(
-                3
+                MAX_TEAM_SIZE
             ):
+
+                column = (
+                    index // 3
+                )
+
+                row = (
+                    index % 3
+                )
 
                 rect = pygame.Rect(
 
-                    39,
+                    17
+                    +
+                    column
+                    *
+                    145,
 
-                    52
-                    + index
-                    * 34,
+                    37
+                    +
+                    row
+                    *
+                    38,
 
-                    242,
+                    140,
 
-                    29,
+                    34,
                 )
 
                 if (
@@ -3531,7 +3879,9 @@ class Game:
     ):
 
         if (
-            button_id != 1
+            button_id
+            !=
+            1
             or
             self.transition
         ):
@@ -3555,27 +3905,28 @@ class Game:
             logical
         )
 
+        # ====================================================
+        # TITLE
+        # ====================================================
+
         if (
             self.state
-            == "title"
+            ==
+            "title"
         ):
 
-            continue_rect = (
-                pygame.Rect(
-                    72,
-                    149,
-                    84,
-                    22,
-                )
+            continue_rect = pygame.Rect(
+                72,
+                149,
+                84,
+                22,
             )
 
-            new_game_rect = (
-                pygame.Rect(
-                    164,
-                    149,
-                    84,
-                    22,
-                )
+            new_rect = pygame.Rect(
+                164,
+                149,
+                84,
+                22,
             )
 
             if (
@@ -3597,10 +3948,16 @@ class Game:
                             "starter"
                         )
 
+                else:
+
+                    self.state = (
+                        "starter"
+                    )
+
                 return
 
             if (
-                new_game_rect.collidepoint(
+                new_rect.collidepoint(
                     x,
                     y,
                 )
@@ -3614,9 +3971,14 @@ class Game:
 
                 return
 
+        # ====================================================
+        # STARTER
+        # ====================================================
+
         elif (
             self.state
-            == "starter"
+            ==
+            "starter"
         ):
 
             for index in range(
@@ -3626,8 +3988,10 @@ class Game:
                 rect = pygame.Rect(
 
                     8
-                    + index
-                    * 104,
+                    +
+                    index
+                    *
+                    104,
 
                     38,
 
@@ -3655,31 +4019,52 @@ class Game:
 
                     return
 
+        # ====================================================
+        # TEAM
+        # ====================================================
+
         elif (
             self.state
-            == "team"
+            ==
+            "team"
         ):
 
             for index in range(
-                3
+                MAX_TEAM_SIZE
             ):
+
+                column = (
+                    index // 3
+                )
+
+                row = (
+                    index % 3
+                )
 
                 rect = pygame.Rect(
 
-                    39,
+                    17
+                    +
+                    column
+                    *
+                    145,
 
-                    52
-                    + index
-                    * 34,
+                    37
+                    +
+                    row
+                    *
+                    38,
 
-                    242,
+                    140,
 
-                    29,
+                    34,
                 )
 
-                if not rect.collidepoint(
-                    x,
-                    y,
+                if not (
+                    rect.collidepoint(
+                        x,
+                        y,
+                    )
                 ):
 
                     continue
@@ -3688,54 +4073,20 @@ class Game:
                     index
                 )
 
-                if (
+                self.choose_team_member(
                     index
-                    >=
-                    len(
-                        self.team
-                    )
-                ):
-
-                    return
-
-                if (
-                    self.return_state
-                    == "battle"
-
-                    and
-                    self.battle
-                ):
-
-                    if (
-                        self.battle.switch(
-                            index
-                        )
-                    ):
-
-                        self.state = (
-                            "battle"
-                        )
-
-                elif (
-                    self.team[
-                        index
-                    ].hp
-                    > 0
-                ):
-
-                    self.active = (
-                        index
-                    )
-
-                    self.state = (
-                        self.return_state
-                    )
+                )
 
                 return
 
+        # ====================================================
+        # BATTLE
+        # ====================================================
+
         elif (
             self.state
-            == "battle"
+            ==
+            "battle"
             and
             self.battle
         ):
@@ -3746,12 +4097,17 @@ class Game:
 
             if (
                 battle.phase
-                != "input"
+                !=
+                "input"
             ):
 
                 return
 
-            if battle.must_switch:
+            # Cambio obbligatorio
+
+            if (
+                battle.must_switch
+            ):
 
                 if pygame.Rect(
                     150,
@@ -3777,6 +4133,8 @@ class Game:
 
                 return
 
+            # C SFERA
+
             if pygame.Rect(
                 142,
                 123,
@@ -3790,6 +4148,8 @@ class Game:
                 battle.capture()
 
                 return
+
+            # B ZAINO
 
             if pygame.Rect(
                 185,
@@ -3807,7 +4167,8 @@ class Game:
 
                     if
                     battle.menu
-                    == "moves"
+                    ==
+                    "moves"
 
                     else
 
@@ -3815,6 +4176,8 @@ class Game:
                 )
 
                 return
+
+            # Q TEAM
 
             if pygame.Rect(
                 228,
@@ -3840,6 +4203,8 @@ class Game:
 
                 return
 
+            # F FUGA
+
             if pygame.Rect(
                 271,
                 123,
@@ -3854,9 +4219,12 @@ class Game:
 
                 return
 
+            # MOSSE
+
             if (
                 battle.menu
-                == "moves"
+                ==
+                "moves"
             ):
 
                 for index in range(
@@ -3870,9 +4238,11 @@ class Game:
                         +
                         (
                             index
-                            % 2
+                            %
+                            2
                         )
-                        * 85
+                        *
+                        85
                     )
 
                     rect_y = (
@@ -3882,9 +4252,11 @@ class Game:
                         +
                         (
                             index
-                            // 2
+                            //
+                            2
                         )
-                        * 17
+                        *
+                        17
                     )
 
                     rect = pygame.Rect(
@@ -3910,6 +4282,8 @@ class Game:
                         )
 
                         return
+
+            # ZAINO
 
             else:
 
@@ -3958,14 +4332,16 @@ class Game:
             self.transition
             and
             self.transition_dir
-            > 0
+            >
+            0
         ):
 
             return
 
         if (
             self.state
-            == "world"
+            ==
+            "world"
         ):
 
             self.update_world(
@@ -3974,7 +4350,8 @@ class Game:
 
         elif (
             self.state
-            == "battle"
+            ==
+            "battle"
             and
             self.battle
         ):
@@ -3991,28 +4368,32 @@ class Game:
 
         if (
             self.state
-            == "title"
+            ==
+            "title"
         ):
 
             self.draw_title()
 
         elif (
             self.state
-            == "starter"
+            ==
+            "starter"
         ):
 
             self.draw_starter()
 
         elif (
             self.state
-            == "world"
+            ==
+            "world"
         ):
 
             self.draw_world()
 
         elif (
             self.state
-            == "battle"
+            ==
+            "battle"
             and
             self.battle
         ):
@@ -4024,33 +4405,38 @@ class Game:
                 self.assets,
 
                 pygame.time.get_ticks()
-                / 1000,
+                /
+                1000,
             )
 
         elif (
             self.state
-            == "team"
+            ==
+            "team"
         ):
 
             self.draw_team()
 
         elif (
             self.state
-            == "help"
+            ==
+            "help"
         ):
 
             self.draw_help()
 
         elif (
             self.state
-            == "pause"
+            ==
+            "pause"
         ):
 
             self.draw_pause()
 
         elif (
             self.state
-            == "ending"
+            ==
+            "ending"
         ):
 
             self.draw_ending()
@@ -4069,14 +4455,6 @@ class Game:
             self.window.get_size()
         )
 
-        # Scaling SOLO intero.
-        #
-        # Esempio:
-        # 320x180 -> 960x540 = x3 perfetto.
-        #
-        # Questo evita che font e sprite diventino
-        # sfocati o deformati.
-
         scale = max(
 
             1,
@@ -4086,34 +4464,36 @@ class Game:
                 min(
 
                     window_width
-                    / BASE_W,
+                    /
+                    BASE_W,
 
                     window_height
-                    / BASE_H,
+                    /
+                    BASE_H,
                 )
             ),
         )
 
         scaled_width = (
             BASE_W
-            * scale
+            *
+            scale
         )
 
         scaled_height = (
             BASE_H
-            * scale
+            *
+            scale
         )
 
-        scaled = (
-            pygame.transform.scale(
+        scaled = pygame.transform.scale(
 
-                self.canvas,
+            self.canvas,
 
-                (
-                    scaled_width,
-                    scaled_height,
-                ),
-            )
+            (
+                scaled_width,
+                scaled_height,
+            ),
         )
 
         self.window.fill(
@@ -4134,14 +4514,16 @@ class Game:
                     -
                     scaled_width
                 )
-                // 2,
+                //
+                2,
 
                 (
                     window_height
                     -
                     scaled_height
                 )
-                // 2,
+                //
+                2,
             ),
         )
 
@@ -4164,7 +4546,8 @@ class Game:
                 self.clock.tick(
                     FPS
                 )
-                / 1000,
+                /
+                1000,
             )
 
             for event in (
@@ -4173,16 +4556,16 @@ class Game:
 
                 if (
                     event.type
-                    == pygame.QUIT
+                    ==
+                    pygame.QUIT
                 ):
 
-                    self.running = (
-                        False
-                    )
+                    self.running = False
 
                 elif (
                     event.type
-                    == pygame.KEYDOWN
+                    ==
+                    pygame.KEYDOWN
                 ):
 
                     self.handle_keydown(
@@ -4191,7 +4574,8 @@ class Game:
 
                 elif (
                     event.type
-                    == pygame.MOUSEMOTION
+                    ==
+                    pygame.MOUSEMOTION
                 ):
 
                     self.handle_mouse_motion(
@@ -4200,22 +4584,22 @@ class Game:
 
                 elif (
                     event.type
-                    == pygame.MOUSEBUTTONDOWN
+                    ==
+                    pygame.MOUSEBUTTONDOWN
                 ):
 
                     self.handle_mouse_down(
-
                         event.pos,
-
                         event.button,
                     )
 
                 elif (
                     event.type
-                    == pygame.VIDEORESIZE
-
+                    ==
+                    pygame.VIDEORESIZE
                     and
-                    not self.fullscreen
+                    not
+                    self.fullscreen
                 ):
 
                     self.window = (
